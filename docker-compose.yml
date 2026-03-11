@@ -1,0 +1,24 @@
+services:
+#  frontend:
+#    build:
+#      context: ./frontend
+#      args:
+#        - VITE_AUTH_URL=${BETTER_AUTH_URL}
+#    ports:
+#    - 4173:4173
+#    env_file:
+#      - .env
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - 7070:7070
+    env_file:
+      - .env
+    volumes:
+      - ./database:/app/database
+      - ./submissions:/app/submissions
+
+volumes:
+  database_data:
+    driver: local
