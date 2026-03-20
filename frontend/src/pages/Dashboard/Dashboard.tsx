@@ -8,25 +8,66 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const [teamId, setTeamId] = useState<string>("Unknown");
     const [entries, setEntries] = useState<string[]>([]);
+    const [error, setError] = useState<string | null>(null);
+    const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
     // @ts-expect-error trust me its there
     const uID: string | undefined = session?.user?.discordId;
 
     useEffect(() => {
         if (!uID) return;
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/team-id/${uID}`)
-            .then(res => res.json())
-            .then(data => setTeamId(data.teamId ?? "Unknown"))
-            .catch(() => setTeamId("Unknown"));
-    }, [uID]);
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/team-id/${uID}`, {
+            credentials: 'include'
+        })
+            .then(async res => {
+                if (res.status === 401) {
+                    setError("Session expired. Please sign in again.");
+                    navigate('/');
+                    return null;
+                }
+                if (!res.ok) {
+                    throw new Error('Failed to fetch team ID');
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data) {
+                    setTeamId(data.teamId ?? "Unknown");
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+                setTeamId("Unknown");
+                setError("Failed to fetch team information");
+            });
+    }, [uID, navigate]);
 
     useEffect(() => {
         if (!teamId || teamId === "Unknown") return;
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`)
-            .then(res => res.json())
-            .then(data => setEntries(data.entries ?? []))
-            .catch(() => setEntries([]));
-    }, [teamId]);
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
+            credentials: 'include'
+        })
+            .then(async res => {
+                if (res.status === 401) {
+                    setError("Session expired. Please sign in again.");
+                    navigate('/');
+                    return null;
+                }
+                if (!res.ok) {
+                    throw new Error('Failed to fetch submissions');
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data) {
+                    setEntries(data.entries ?? []);
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+                setEntries([]);
+            });
+    }, [teamId, navigate]);
 
     if (isPending) {
         return <p>Loading...</p>
@@ -37,14 +78,46 @@ export default function Dashboard() {
         return null;
     }
 
-    const handleFileUpload = (acceptedFiles: File) => {
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/zip'
-            },
-            body: acceptedFiles,
-        })
+    const handleFileUpload = async (acceptedFiles: File) => {
+        setUploadStatus("Uploading...");
+        setError(null);
+        
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/zip'
+                },
+                credentials: 'include',
+                body: acceptedFiles,
+            });
+
+            if (response.status === 401) {
+                setError("Session expired. Please sign in again.");
+                setUploadStatus(null);
+                navigate('/');
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('Upload failed');
+            }
+
+            setUploadStatus("Upload successful!");
+            setTimeout(() => setUploadStatus(null), 3000);
+            
+            // Refresh submissions list
+            fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
+                credentials: 'include'
+            })
+                .then(res => res.json())
+                .then(data => setEntries(data.entries ?? []))
+                .catch(console.error);
+        } catch (err) {
+            console.error(err);
+            setError("Failed to upload file. Please try again.");
+            setUploadStatus(null);
+        }
     }
 
     // if (teamId === "Unknown") {
@@ -60,6 +133,18 @@ export default function Dashboard() {
     return (
         <div className={`py-5 flex flex-col text-center h-fit`}>
             <h1>Welcome team {teamId}!</h1>
+
+            {error && (
+                <div className="bg-red-500 text-white px-4 py-2 rounded-lg mx-auto mt-4 max-w-md">
+                    {error}
+                </div>
+            )}
+
+            {uploadStatus && (
+                <div className="bg-green-500 text-white px-4 py-2 rounded-lg mx-auto mt-4 max-w-md">
+                    {uploadStatus}
+                </div>
+            )}
 
             <Dropzone accept={{
                 'application/tar+gzip': ['.tar.gz'],
