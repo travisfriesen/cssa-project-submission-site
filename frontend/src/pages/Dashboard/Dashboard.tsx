@@ -1,89 +1,152 @@
 import { authClient } from '../../lib/auth-client'
-import {useNavigate} from "react-router";
-import {useEffect, useState} from "react";
+import { useNavigate } from "react-router";
+import { useEffect, useRef, useState } from "react";
 import Dropzone from "react-dropzone";
+import FileCard, { type IFileCardProps } from '../../components/FileCard';
 
 export default function Dashboard() {
-    const { data: session, isPending } = authClient.useSession();
-    const navigate = useNavigate();
-    const [teamId, setTeamId] = useState<string>("Unknown");
-    const [entries, setEntries] = useState<string[]>([]);
+	const { data: session, isPending } = authClient.useSession();
+	const navigate = useNavigate();
+	const [teamId, setTeamId] = useState<string | null>(null);
+	const [entries, setEntries] = useState<string[]>([]);
+	const [pendingFile, setPendingFile] = useState<File | null>(null);
+	const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+	const xhrRef = useRef<XMLHttpRequest | null>(null);
 
-    // @ts-expect-error trust me its there
-    const uID: string | undefined = session?.user?.discordId;
+	// @ts-expect-error trust me its there
+	const uID: string | undefined = session?.user?.discordId;
 
-    useEffect(() => {
-        if (!uID) return;
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/team-id/${uID}`)
-            .then(res => res.json())
-            .then(data => setTeamId(data.teamId ?? "Unknown"))
-            .catch(() => setTeamId("Unknown"));
-    }, [uID]);
+	useEffect(() => {
+		if (!uID) return;
+		console.log("getting team id")
+		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/team-id/${uID}`)
+			.then(res => res.json())
+			.then(data => {
+				console.log(data);
+				setTeamId(data.teamId ?? null);
+			})
+			.catch(() => setTeamId(null));
+	}, [uID]);
 
-    useEffect(() => {
-        if (!teamId || teamId === "Unknown") return;
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`)
-            .then(res => res.json())
-            .then(data => setEntries(data.entries ?? []))
-            .catch(() => setEntries([]));
-    }, [teamId]);
+	useEffect(() => {
+		if (!teamId) return;
+		console.log("getting submissions")
+		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`)
+			.then(res => res.json())
+			.then(data => setEntries(data.entries ?? []))
+			.catch(() => setEntries([]));
+	}, [teamId]);
 
-    if (isPending) {
-        return <p>Loading...</p>
-    }
+	if (isPending) {
+		return <p>Loading...</p>
+	}
 
-    if (!session) {
-        navigate('/');
-        return null;
-    }
+	if (!session) {
+		navigate('/');
+		return null;
+	}
 
-    const handleFileUpload = (acceptedFiles: File) => {
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/zip'
-            },
-            body: acceptedFiles,
-        })
-    }
+	if (teamId === null) {
+		return <p>Loading team...</p>;
+	}
 
-    // if (teamId === "Unknown") {
-    //     return (
-    //         <div className={`py-5 flex flex-col text-center h-screen`}>
-    //             <h1>Welcome!</h1>
-    //             <p>You are not part of any team yet.</p>
-    //             <p>Please create one within the discord.</p>
-    //         </div>
-    //     )
-    // }
+	const handleSubmit = () => {
+		if (!pendingFile) return;
 
-    return (
-        <div className={`py-5 flex flex-col text-center h-fit`}>
-            <h1>Welcome team {teamId}!</h1>
+		const xhr = new XMLHttpRequest();
+		xhrRef.current = xhr;
 
-            <Dropzone accept={{
-                'application/tar+gzip': ['.tar.gz'],
-                'application/zip': ['.zip'],
-                'application/x-zip-compressed': ['.zip'],
-                ' multipart/x-zip': ['.zip']
-            }} maxFiles={1} maxSize={2e+9} onDrop={acceptedFiles => handleFileUpload(acceptedFiles[0])}>
-                {({getRootProps, getInputProps}) => (
-                    <section>
-                        <div {...getRootProps()} className={`bg-gray-600 w-[40vw] h-[20vw] flex flex-col items-center justify-center mx-auto mt-10 border-4 border-dashed border-gray-400 rounded-lg cursor-pointer`}>
-                            <input {...getInputProps()} />
-                            <p>Drag 'n' drop some files here, or click to select files</p>
-                        </div>
-                    </section>
-                )}
-            </Dropzone>
-            <div>
-                <h2 className={`mt-10`}>Your submissions:</h2>
-                <ul>
-                    {entries.map((entry, index) => (
-                        <li key={index}>{entry}</li>
-                    ))}
-                </ul>
-            </div>
-        </div>
-    )
+		xhr.upload.onprogress = (e) => {
+			if (e.lengthComputable) {
+				setUploadProgress(Math.round((e.loaded / e.total) * 100));
+			}
+		};
+
+		xhr.onload = () => {
+			setUploadProgress(null);
+			setPendingFile(null);
+			xhrRef.current = null;
+			fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`)
+				.then(res => res.json())
+				.then(data => setEntries(data.entries ?? []))
+				.catch(() => { });
+		};
+
+		xhr.onerror = () => {
+			setUploadProgress(null);
+			xhrRef.current = null;
+		};
+
+		xhr.open('POST', `${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`);
+		xhr.setRequestHeader('Content-Type', 'application/zip');
+		xhr.send(pendingFile);
+	};
+
+	// if (teamId === "Unknown") {
+	//     return (
+	//         <div className={`py-5 flex flex-col text-center h-screen`}>
+	//             <h1>Welcome!</h1>
+	//             <p>You are not part of any team yet.</p>
+	//             <p>Please create one within the discord.</p>
+	//         </div>
+	//     )
+	// }
+
+	return (
+		<div className={`py-5 flex flex-col text-center h-fit`}>
+			<h1>Welcome team {teamId}!</h1>
+
+			<Dropzone accept={{
+				'application/tar+gzip': ['.tar.gz'],
+				'application/zip': ['.zip'],
+				'application/x-zip-compressed': ['.zip'],
+				' multipart/x-zip': ['.zip']
+			}} maxFiles={1} maxSize={2e+9} onDrop={acceptedFiles => setPendingFile(acceptedFiles[0])}>
+				{({ getRootProps, getInputProps }) => (
+					<section>
+						<div {...getRootProps()} className={`bg-gray-600 w-[40vw] h-[20vw] flex flex-col items-center justify-center mx-auto mt-10 border-4 border-dashed border-gray-400 rounded-lg cursor-pointer`}>
+							<input {...getInputProps()} />
+							{pendingFile
+								? <p>{pendingFile.name}</p>
+								: <p>Drag 'n' drop some files here, or click to select files</p>
+							}
+						</div>
+					</section>
+				)}
+			</Dropzone>
+
+			{pendingFile && uploadProgress === null && (
+				<button
+					onClick={handleSubmit}
+					className="mx-auto mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
+				>
+					Submit
+				</button>
+			)}
+
+			{uploadProgress !== null && (
+				<div className="w-[40vw] mx-auto mt-4">
+					<div className="flex justify-between text-sm mb-1">
+						<span>Uploading {pendingFile?.name}</span>
+						<span>{uploadProgress}%</span>
+					</div>
+					<div className="w-full bg-gray-700 rounded-full h-3">
+						<div
+							className="bg-blue-500 h-3 rounded-full transition-all"
+							style={{ width: `${uploadProgress}%` }}
+						/>
+					</div>
+				</div>
+			)}
+
+			<div>
+				<h2 className={`my-10 text-xl`}>Your submissions:</h2>
+				<ul>
+					{entries.map((entry) => (
+						<FileCard key={entry.id} {...entry} />
+					))}
+				</ul>
+			</div>
+		</div>
+	)
 }
