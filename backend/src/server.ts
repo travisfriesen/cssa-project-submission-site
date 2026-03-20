@@ -91,7 +91,7 @@ export const getParamValue = (
 	})
 
 	app.get("/api/submissions/", async (req, res) => {
-		const submissions = getAllFilesEntry();
+		const submissions = await getAllFilesEntry();
 		res.json({ submissions });
 	})
 

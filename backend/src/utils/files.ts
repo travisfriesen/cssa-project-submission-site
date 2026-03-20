@@ -17,11 +17,10 @@ export function saveFile(fileName: string, content: Buffer | string): boolean {
 	return true;
 }
 
-export function getFile(fileName: string) {
+export function getFile(fileName: string): Buffer | null {
 	const filePath = submissionsDir + "/" + fileName;
 	if (fs.existsSync(filePath)) {
-		const file = fs.readFileSync(filePath, "utf-8");
-		return new Blob([file], { type: "text/plain" });
+		return fs.readFileSync(filePath);
 	} else {
 		console.error("File not found:", filePath);
 		return null;
