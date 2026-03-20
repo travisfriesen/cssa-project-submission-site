@@ -15,9 +15,11 @@
 	"devDependencies": {
 		"@tsconfig/node-ts": "^23.6.4",
 		"@types/express": "^5.0.6",
+		"@types/pg": "^8.18.0",
 		"drizzle-kit": "^0.31.9",
 		"tsc-alias": "^1.8.16",
 		"tsconfig-paths": "^4.2.0",
+		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
 	},
 	"dependencies": {
@@ -27,7 +29,8 @@
 		"dotenv": "^17.3.1",
 		"drizzle-orm": "^0.45.1",
 		"express": "^5.2.1",
-		"pocketbase": "^0.26.8",
+		"pg": "^8.20.0",
+		"pocketbase": "^0.21.5",
 		"ts-node": "^10.9.2"
 	}
 }

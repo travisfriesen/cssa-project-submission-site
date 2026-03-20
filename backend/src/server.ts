@@ -35,6 +35,8 @@ export const getParamValue = (
 
 	app.all("/api/auth/*splat", toNodeHandler(auth));
 
+	app.use(express.json());
+
 	app.get("/api/team-id/:uid", async (req, res) => {
 		const uid = getParamValue(req.params.uid);
 
@@ -57,7 +59,7 @@ export const getParamValue = (
 		}
 	});
 
-	app.post("/api/submissions/:teamId", async (req, res) => {
+	app.post("/api/submissions/:teamId", express.raw({ type: '*/*', limit: '2gb' }), async (req, res) => {
 		const teamId = getParamValue(req.params.teamId);
 
 		if (!teamId) {
@@ -73,8 +75,8 @@ export const getParamValue = (
 				return;
 			}
 
-		saveFileEntry(teamId, fileName);
-
+		await saveFileEntry(teamId, fileName);
+		res.json({ success: true, fileName });
 	})
 
 	app.get("/api/submissions/:teamId", async (req, res) => {
@@ -84,13 +86,8 @@ export const getParamValue = (
 			return;
 		}
 
-		const fileName = getFilesEntry(teamId);
-		if (!fileName) {
-			res.status(404).json({ error: "Submission not found for team" });
-			return;
-		}
-
-		res.json({ fileName });
+		const entries = await getFilesEntry(teamId);
+		res.json({ entries });
 	})
 
 	app.get("/api/submissions/", async (req, res) => {
@@ -116,8 +113,6 @@ export const getParamValue = (
 		res.setHeader("Content-Type", "application/zip");
 		res.send(file);
 	})
-
-	app.use(express.json());
 
 	app.listen(port, () => {
 		console.log(`Example app listening on port ${port}`);
