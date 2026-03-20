@@ -110,7 +110,7 @@ export const getParamValue = (
 		}
 	});
 
-	app.post("/api/submissions/:teamId", requireAuth, uploadRateLimit, rawUploadParser, async (req, res) => {
+	app.post("/api/submissions/:teamId", requireAuth, uploadRateLimit, rawUploadParser express.raw({ type: '*/*', limit: '2gb' }), async (req, res) => {
 		const teamId = getParamValue(req.params.teamId);
 
 		if (!teamId) {
@@ -144,8 +144,7 @@ export const getParamValue = (
 			}
 
 		await saveFileEntry(teamId, fileName);
-		res.status(201).json({ fileName });
-
+		res.json({ success: true, fileName });
 	})
 
 	app.get("/api/submissions/:teamId", requireAuth, async (req, res) => {
@@ -156,15 +155,10 @@ export const getParamValue = (
 		}
 
 		const entries = await getFilesEntry(teamId);
-		if (!entries || entries.length === 0) {
-			res.status(404).json({ error: "Submission not found for team" });
-			return;
-		}
-
-		res.json({ entries: entries.map((entry) => entry.fileName) });
+		res.json({ entries });
 	})
 
-	app.get("/api/submissions/", requireAuth, async (req, res) => {
+	app.get("/api/submissions/", async (req, res) => {
 		const submissions = await getAllFilesEntry();
 		res.json({ submissions });
 	})
