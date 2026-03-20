@@ -8,7 +8,7 @@ export default function Dashboard() {
 	const { data: session, isPending } = authClient.useSession();
 	const navigate = useNavigate();
 	const [teamId, setTeamId] = useState<string | null>(null);
-	const [entries, setEntries] = useState<string[]>([]);
+	const [entries, setEntries] = useState<IFileCardProps[]>([]);
 	const [pendingFile, setPendingFile] = useState<File | null>(null);
 	const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 	const xhrRef = useRef<XMLHttpRequest | null>(null);
@@ -126,26 +126,20 @@ export default function Dashboard() {
 
 			{uploadProgress !== null && (
 				<div className="w-[40vw] mx-auto mt-4">
-					<div className="flex justify-between text-sm mb-1">
-						<span>Uploading {pendingFile?.name}</span>
-						<span>{uploadProgress}%</span>
-					</div>
-					<div className="w-full bg-gray-700 rounded-full h-3">
-						<div
-							className="bg-blue-500 h-3 rounded-full transition-all"
-							style={{ width: `${uploadProgress}%` }}
-						/>
+					<p className="text-sm mb-2 text-gray-300">Uploading {pendingFile?.name}...</p>
+					<div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+						<div className="h-3 bg-blue-500 rounded-full w-1/4" style={{ animation: 'slide 1.8s ease-in-out infinite' }} />
 					</div>
 				</div>
 			)}
 
 			<div>
 				<h2 className={`my-10 text-xl`}>Your submissions:</h2>
-				<ul>
-					{entries.map((entry) => (
+				{[...entries]
+					.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
+					.map((entry) => (
 						<FileCard key={entry.id} {...entry} />
 					))}
-				</ul>
 			</div>
 		</div>
 	)

@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@keyframes slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

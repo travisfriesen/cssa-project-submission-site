@@ -3,6 +3,7 @@ import './index.css'
 import {createBrowserRouter, RouterProvider} from 'react-router'
 import Home from "./pages/Home/Home.tsx"
 import Dashboard from "./pages/Dashboard/Dashboard.tsx";
+import Admin from "./pages/Dashboard/Admin/Admin.tsx";
 import Header from "./components/Header.tsx";
 
 const router = createBrowserRouter([
@@ -13,6 +14,10 @@ const router = createBrowserRouter([
 	{
 		path: "/dashboard",
 		element: <Dashboard />
+	},
+	{
+		path: "/admin",
+		element: <Admin />
 	}
 ]);
 
