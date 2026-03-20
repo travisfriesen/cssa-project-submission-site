@@ -19,23 +19,58 @@ export default function Dashboard() {
 	useEffect(() => {
 		if (!uID) return;
 		console.log("getting team id")
-		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/team-id/${uID}`)
-			.then(res => res.json())
+		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/team-id/${uID}`, {
+            credentials: 'include'
+        })
+        .then(async res => {
+                if (res.status === 401) {
+                    setError("Session expired. Please sign in again.");
+                    navigate('/');
+                    return null;
+                }
+                if (!res.ok) {
+                    throw new Error('Failed to fetch team ID');
+                }
+                return res.json();
+            })
 			.then(data => {
-				console.log(data);
-				setTeamId(data.teamId ?? null);
-			})
-			.catch(() => setTeamId(null));
-	}, [uID]);
+                if (data) {
+                    setTeamId(data.teamId ?? "Unknown");
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+                setTeamId("Unknown");
+                setError("Failed to fetch team information");
+            });
+	}, [uID, navigate]);
 
-	useEffect(() => {
-		if (!teamId) return;
-		console.log("getting submissions")
-		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`)
-			.then(res => res.json())
-			.then(data => setEntries(data.entries ?? []))
-			.catch(() => setEntries([]));
-	}, [teamId]);
+  useEffect(() => {
+        if (!teamId) return;
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
+            credentials: 'include'
+        })
+            .then(async res => {
+                if (res.status === 401) {
+                    setError("Session expired. Please sign in again.");
+                    navigate('/');
+                    return null;
+                }
+                if (!res.ok) {
+                    throw new Error('Failed to fetch submissions');
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data) {
+                    setEntries(data.entries ?? []);
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+                setEntries([]);
+            });
+    }, [teamId, navigate]);
 
 	if (isPending) {
 		return <p>Loading...</p>
@@ -81,6 +116,48 @@ export default function Dashboard() {
 		xhr.setRequestHeader('Content-Type', 'application/zip');
 		xhr.send(pendingFile);
 	};
+  
+  const handleFileUpload = async (acceptedFiles: File) => {
+        setUploadStatus("Uploading...");
+        setError(null);
+        
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/zip'
+                },
+                credentials: 'include',
+                body: acceptedFiles,
+            });
+
+            if (response.status === 401) {
+                setError("Session expired. Please sign in again.");
+                setUploadStatus(null);
+                navigate('/');
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('Upload failed');
+            }
+
+            setUploadStatus("Upload successful!");
+            setTimeout(() => setUploadStatus(null), 3000);
+            
+            // Refresh submissions list
+            fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
+                credentials: 'include'
+            })
+                .then(res => res.json())
+                .then(data => setEntries(data.entries ?? []))
+                .catch(console.error);
+        } catch (err) {
+            console.error(err);
+            setError("Failed to upload file. Please try again.");
+            setUploadStatus(null);
+        }
+    }
 
 	// if (teamId === "Unknown") {
 	//     return (
