@@ -37,6 +37,25 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
 	next();
 };
 
+const isAdmin = async (req: Request, res: Response, next:NextFunction) => {
+	const auth = await authPromise;
+	const session = await auth.api.getSession({ headers: req.headers as any });
+
+	// @ts-expect-error trust me its there
+	const uID: string | undefined = session?.user.discordId
+
+	const adminIds = ["1145458761151033374", "707753613967229011", "259881984069730304"];
+
+	if (!uID || !adminIds.includes(uID)) {
+		res.status(403).json({ error: "Not admin." });
+		return;
+	}
+
+	// Add session to request object for use in route handlers
+	(req as any).session = session;
+	next();
+}
+
 const getDiscordIdFromSession = (session: any): string | undefined =>
 	session?.user?.discordId ??
 	session?.session?.user?.discordId ??
@@ -110,7 +129,12 @@ export const getParamValue = (
 		}
 	});
 
-	app.post("/api/submissions/:teamId", requireAuth, uploadRateLimit, rawUploadParser express.raw({ type: '*/*', limit: '2gb' }), async (req, res) => {
+	app.get("/api/submissions/", requireAuth, isAdmin, async (req, res) => {
+		const submissions = await getAllFilesEntry();
+		res.json({ submissions });
+	})
+
+	app.post("/api/submissions/:teamId", requireAuth, uploadRateLimit, rawUploadParser, express.raw({ type: '*/*', limit: '2gb' }), async (req, res) => {
 		const teamId = getParamValue(req.params.teamId);
 
 		if (!teamId) {
@@ -156,11 +180,6 @@ export const getParamValue = (
 
 		const entries = await getFilesEntry(teamId);
 		res.json({ entries });
-	})
-
-	app.get("/api/submissions/", async (req, res) => {
-		const submissions = await getAllFilesEntry();
-		res.json({ submissions });
 	})
 
 	app.get("/api/submissions/file/:fileName", requireAuth, async (req, res) => {

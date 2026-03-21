@@ -3,7 +3,7 @@ services:
     build:
       context: ./frontend
       args:
-        - VITE_AUTH_URL=${BETTER_AUTH_URL}
+        - VITE_BACKEND_URL=${VITE_BACKEND_URL}
     ports:
       - 4173:4173
     env_file:
