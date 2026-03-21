@@ -11,6 +11,7 @@ export default function Dashboard() {
 	const [entries, setEntries] = useState<IFileCardProps[]>([]);
 	const [pendingFile, setPendingFile] = useState<File | null>(null);
 	const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+	const [error, setError] = useState<string | null>(null);
 	const xhrRef = useRef<XMLHttpRequest | null>(null);
 
 	// @ts-expect-error trust me its there
@@ -101,7 +102,9 @@ export default function Dashboard() {
 			setUploadProgress(null);
 			setPendingFile(null);
 			xhrRef.current = null;
-			fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`)
+			fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
+				credentials: 'include'
+			})
 				.then(res => res.json())
 				.then(data => setEntries(data.entries ?? []))
 				.catch(() => { });
@@ -113,51 +116,10 @@ export default function Dashboard() {
 		};
 
 		xhr.open('POST', `${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`);
+		xhr.withCredentials = true;
 		xhr.setRequestHeader('Content-Type', 'application/zip');
 		xhr.send(pendingFile);
 	};
-  
-  const handleFileUpload = async (acceptedFiles: File) => {
-        setUploadStatus("Uploading...");
-        setError(null);
-        
-        try {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/zip'
-                },
-                credentials: 'include',
-                body: acceptedFiles,
-            });
-
-            if (response.status === 401) {
-                setError("Session expired. Please sign in again.");
-                setUploadStatus(null);
-                navigate('/');
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error('Upload failed');
-            }
-
-            setUploadStatus("Upload successful!");
-            setTimeout(() => setUploadStatus(null), 3000);
-            
-            // Refresh submissions list
-            fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
-                credentials: 'include'
-            })
-                .then(res => res.json())
-                .then(data => setEntries(data.entries ?? []))
-                .catch(console.error);
-        } catch (err) {
-            console.error(err);
-            setError("Failed to upload file. Please try again.");
-            setUploadStatus(null);
-        }
-    }
 
 	// if (teamId === "Unknown") {
 	//     return (
@@ -172,6 +134,12 @@ export default function Dashboard() {
 	return (
 		<div className={`py-5 flex flex-col text-center h-fit`}>
 			<h1>Welcome team {teamId}!</h1>
+
+			{error && (
+                <div className="bg-red-500 text-white px-4 py-2 rounded-lg mx-auto mt-4 max-w-md">
+                    {error}
+                </div>
+            )}
 
 			<Dropzone accept={{
 				'application/tar+gzip': ['.tar.gz'],
