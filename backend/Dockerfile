@@ -1,4 +1,4 @@
-FROM node:25-alpine AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
 
 COPY package*.json ./
@@ -19,9 +19,9 @@ COPY src/ ./src/
 COPY drizzle ./drizzle
 
 RUN npm run build
-RUN npm prune --production 
+RUN npm prune --production
 
-FROM node:25-alpine AS production
+FROM node:22-slim AS production
 WORKDIR /app
 
 ENV BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
@@ -34,8 +34,8 @@ ENV CORS_ORIGIN=${CORS_ORIGIN}
 ENV SUBMISSIONS_PATH=${SUBMISSIONS_PATH}
 
 # Create non-root user/group
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S express -u 1001 -G nodejs
+RUN groupadd -g 1001 nodejs && \
+    useradd -u 1001 -g nodejs -s /bin/sh -m express
 
 # Copy only built artifacts and production node_modules + package files from builder
 COPY --from=builder --chown=express:nodejs /app/dist ./dist
@@ -43,11 +43,14 @@ COPY --from=builder --chown=express:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=express:nodejs /app/package*.json ./
 COPY --from=builder --chown=express:nodejs /app/drizzle ./drizzle
 
-RUN mkdir -p /app/database && chown -R express:nodejs /app/database
-RUN mkdir -p /app/submissions && chown -R express:nodejs /app/submissions
+RUN mkdir -p /app/database /app/submissions && chown -R express:nodejs /app/database /app/submissions
 
-USER express
+RUN apt-get update && apt-get install -y gosu && rm -rf /var/lib/apt/lists/*
+
+COPY --chown=root:root entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE ${BACKEND_PORT}
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["npm", "start"]
