@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useEffect, useRef, useState } from "react";
 import Dropzone from "react-dropzone";
 import FileCard, { type IFileCardProps } from '../../components/FileCard';
+import ErrorMessage from '../../components/ErrorMessage';
 
 export default function Dashboard() {
 	const { data: session, isPending } = authClient.useSession();
@@ -84,6 +85,10 @@ export default function Dashboard() {
 
 	if (teamId === null) {
 		return <p>Loading team...</p>;
+	}
+
+	if (teamId === "Unknown" && !isPending) {
+		return <><ErrorMessage message='Team is unknown, please check to see if you are in a team in the discord. Otherwise contact the CSSA for help.'/></>
 	}
 
 	const handleSubmit = () => {

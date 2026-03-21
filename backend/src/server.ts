@@ -178,6 +178,18 @@ export const getParamValue = (
 			return;
 		}
 
+		const discordId = getDiscordIdFromSession((req as any).session);
+		if (!discordId) {
+			res.status(403).json({ error: "Missing Discord identity in session" });
+			return;
+		}
+
+		const teamIdForUser = await GetTeamIDByUserID(discordId);
+		if (!isAdmin || !teamIdForUser || teamIdForUser !== teamId) {
+			res.status(403).json({ error: "You are not authorized to download entries for this team" });
+			return;
+		}
+
 		const entries = await getFilesEntry(teamId);
 		res.json({ entries });
 	})
@@ -193,6 +205,18 @@ export const getParamValue = (
 
 		if (!file) {
 			res.status(404).json({ error: "File not found" });
+			return;
+		}
+
+		const discordId = getDiscordIdFromSession((req as any).session);
+		if (!discordId) {
+			res.status(403).json({ error: "Missing Discord identity in session" });
+			return;
+		}
+
+
+		if (!isAdmin) {
+			res.status(403).json({ error: "You are not authorized to download files." });
 			return;
 		}
 
