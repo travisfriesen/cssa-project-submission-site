@@ -2,8 +2,7 @@
 
 @font-face {
   font-family: 'Bernoru Black Ultra Expanded';
-  src: url('/fonts/bernoru-blackultraexpanded.woff') format('woff'),
-       url('/fonts/bernoru-blackultraexpanded.otf') format('opentype');
+  src: url('/fonts/bernoru-blackultraexpanded.woff') format('woff');
   font-weight: normal;
   font-style: normal;
 }
