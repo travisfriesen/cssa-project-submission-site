@@ -3,8 +3,8 @@ WORKDIR /app
 
 COPY package*.json ./
 
-ARG VITE_AUTH_URL
-ENV VITE_AUTH_URL=${VITE_AUTH_URL}
+ARG VITE_BACKEND_URL
+ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 
 RUN npm ci && npm cache clean --force
 
@@ -20,8 +20,6 @@ RUN npm prune --production
 
 FROM node:25-alpine AS production
 WORKDIR /app
-
-ENV VITE_AUTH_URL=${VITE_AUTH_URL}
 
 # Create non-root user/group
 RUN addgroup -g 1001 -S nodejs && \

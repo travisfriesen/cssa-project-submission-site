@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { authClient } from '../../../lib/auth-client'
+import { useNavigate } from "react-router";
 
 interface Submission {
 	id: string;
@@ -8,16 +10,27 @@ interface Submission {
 }
 
 export default function Admin() {
+	const { data: session, isPending } = authClient.useSession();
+	const navigate = useNavigate();
 	const [submissions, setSubmissions] = useState<Submission[]>([]);
 	const [activeTeam, setActiveTeam] = useState<string | null>(null);
 	const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+	// @ts-expect-error trust me its there
+	const uID: string | undefined = session?.user?.discordId;
+
+	const adminIds = ["1145458761151033374", "707753613967229011", "259881984069730304"];
+	const isAdmin = !isPending && !!session && !!uID && adminIds.includes(uID);
+
 	useEffect(() => {
-		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/`)
+		if (!isAdmin) return;
+		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/`, {
+			credentials: 'include'
+		})
 			.then(res => res.json())
 			.then(data => setSubmissions(data.submissions ?? []))
 			.catch(() => setSubmissions([]));
-	}, []);
+	}, [isAdmin]);
 
 	const byTeam = submissions.reduce<Record<string, Submission[]>>((acc, sub) => {
 		(acc[sub.teamId] ??= []).push(sub);
@@ -30,6 +43,15 @@ export default function Admin() {
 		setActiveTeam(teamId);
 		sectionRefs.current[teamId]?.scrollIntoView({ behavior: "smooth", block: "start" });
 	};
+
+	if (isPending) {
+		return <p>Loading...</p>
+	}
+
+	if (!session || !isAdmin) {
+		navigate('/');
+		return null;
+	}
 
 	return (
 		<div className="py-5 flex flex-col text-center h-fit">

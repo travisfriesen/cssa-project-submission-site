@@ -11,6 +11,7 @@ export default function Dashboard() {
 	const [entries, setEntries] = useState<IFileCardProps[]>([]);
 	const [pendingFile, setPendingFile] = useState<File | null>(null);
 	const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+	const [error, setError] = useState<string | null>(null);
 	const xhrRef = useRef<XMLHttpRequest | null>(null);
 
 	// @ts-expect-error trust me its there
@@ -19,23 +20,58 @@ export default function Dashboard() {
 	useEffect(() => {
 		if (!uID) return;
 		console.log("getting team id")
-		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/team-id/${uID}`)
-			.then(res => res.json())
+		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/team-id/${uID}`, {
+            credentials: 'include'
+        })
+        .then(async res => {
+                if (res.status === 401) {
+                    setError("Session expired. Please sign in again.");
+                    navigate('/');
+                    return null;
+                }
+                if (!res.ok) {
+                    throw new Error('Failed to fetch team ID');
+                }
+                return res.json();
+            })
 			.then(data => {
-				console.log(data);
-				setTeamId(data.teamId ?? null);
-			})
-			.catch(() => setTeamId(null));
-	}, [uID]);
+                if (data) {
+                    setTeamId(data.teamId ?? "Unknown");
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+                setTeamId("Unknown");
+                setError("Failed to fetch team information");
+            });
+	}, [uID, navigate]);
 
-	useEffect(() => {
-		if (!teamId) return;
-		console.log("getting submissions")
-		fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`)
-			.then(res => res.json())
-			.then(data => setEntries(data.entries ?? []))
-			.catch(() => setEntries([]));
-	}, [teamId]);
+  useEffect(() => {
+        if (!teamId) return;
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
+            credentials: 'include'
+        })
+            .then(async res => {
+                if (res.status === 401) {
+                    setError("Session expired. Please sign in again.");
+                    navigate('/');
+                    return null;
+                }
+                if (!res.ok) {
+                    throw new Error('Failed to fetch submissions');
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data) {
+                    setEntries(data.entries ?? []);
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+                setEntries([]);
+            });
+    }, [teamId, navigate]);
 
 	if (isPending) {
 		return <p>Loading...</p>
@@ -66,7 +102,9 @@ export default function Dashboard() {
 			setUploadProgress(null);
 			setPendingFile(null);
 			xhrRef.current = null;
-			fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`)
+			fetch(`${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`, {
+				credentials: 'include'
+			})
 				.then(res => res.json())
 				.then(data => setEntries(data.entries ?? []))
 				.catch(() => { });
@@ -78,6 +116,7 @@ export default function Dashboard() {
 		};
 
 		xhr.open('POST', `${import.meta.env.VITE_BACKEND_URL}/api/submissions/${teamId}`);
+		xhr.withCredentials = true;
 		xhr.setRequestHeader('Content-Type', 'application/zip');
 		xhr.send(pendingFile);
 	};
@@ -95,6 +134,12 @@ export default function Dashboard() {
 	return (
 		<div className={`py-5 flex flex-col text-center h-fit`}>
 			<h1>Welcome team {teamId}!</h1>
+
+			{error && (
+                <div className="bg-red-500 text-white px-4 py-2 rounded-lg mx-auto mt-4 max-w-md">
+                    {error}
+                </div>
+            )}
 
 			<Dropzone accept={{
 				'application/tar+gzip': ['.tar.gz'],

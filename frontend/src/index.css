@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Bernoru Black Ultra Expanded';
+  src: url('/fonts/bernoru-blackultraexpanded.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.font-bernoru {
+  font-family: 'Bernoru Black Ultra Expanded', sans-serif !important;
+}
+
+.blueprint-bg {
+  background-color: #3d5091;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
 @keyframes slide {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
@@ -12,7 +31,7 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  background-color: #2b3b74;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
