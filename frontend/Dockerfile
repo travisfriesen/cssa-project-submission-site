@@ -16,23 +16,19 @@ COPY vite.config.ts ./
 COPY index.html ./
 
 RUN npm run build
-RUN npm prune --production 
 
 FROM node:25-alpine AS production
 WORKDIR /app
 
-# Create non-root user/group
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S vite -u 1001 -G nodejs
+    adduser -S app -u 1001 -G nodejs
 
-# Copy only built artifacts and production node_modules + package files from builder
-COPY --from=builder --chown=vite:nodejs /app/dist ./dist
-COPY --from=builder --chown=vite:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=vite:nodejs /app/package*.json ./
+COPY --from=builder --chown=app:nodejs /app/dist ./dist
 
-USER vite
+RUN npm install -g serve
 
-EXPOSE ${BACKEND_PORT}
+USER app
 
-CMD ["npm", "run", "preview"]
+EXPOSE 4173
 
+CMD ["serve", "-s", "dist", "-l", "4173"]
