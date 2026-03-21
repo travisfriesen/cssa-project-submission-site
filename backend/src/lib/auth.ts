@@ -10,10 +10,11 @@ import path from "node:path";
 configDotenv();
 
 const dbPath = process.env.DATABASE_PATH ?? "/app/database";
-const client = new PGlite(dbPath);
-const db = drizzle({ client, schema });
+export const client = new PGlite(dbPath);
+export const db = drizzle({ client, schema });
 
 async function createAuth() {
+	await client.waitReady;
 	await migrate(db, { migrationsFolder: path.join(__dirname, "../../drizzle") });
 
 	return betterAuth({

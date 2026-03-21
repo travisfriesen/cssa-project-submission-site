@@ -43,8 +43,8 @@ COPY --from=builder --chown=express:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=express:nodejs /app/package*.json ./
 COPY --from=builder --chown=express:nodejs /app/drizzle ./drizzle
 
-RUN mkdir -p /app/database && chown -R express:node /app/database
-RUN mkdir -p /app/submissions && chown -R express:node /app/submissions
+RUN mkdir -p /app/database && chown -R express:nodejs /app/database
+RUN mkdir -p /app/submissions && chown -R express:nodejs /app/submissions
 
 USER express
 
